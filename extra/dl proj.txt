@@ -1,0 +1,39 @@
+0. 
+Wave U-Net 의 개선
+
+
+1.
+De - noising
+(Croped)
+NMS - 각 freq  domain
+Double Thresholding
+~ 후처리 기법
+
+
+
+2.
+pre-weighted Gaussian kernel layer addition
+
+3.
+1 -> Croped freq domain 에서 freq-wised loss function
+Loss ~ L2
+이상한 주파수 내역의 조그마한 오류가 생김 .
+~ L2
+이상한 주파수 내역에서는 적은 오류에도 큰 loss ,
+
+4. GAN (찍먹해서 보고서에 주절거리는 정도로 밖에는 못할듯)
+paper Gan + denoise ~ noise -> GAN 증폭
+
+Clean data - model output clean data ~> GAN 증폭
+
+!문제1. train 시켜야함. >> 1
+
+마지막으로 model - GAN result 를 하면 어떨ㄲ ㅏ,, , , (Suppression 필요하긴 할 듯,)
+
+5.
+ensemble model
+
+1D conv U-Net , 2D conv U-net 결과를
+1D 혹은 2D 에서 weighted sum (가능하면 trainable로)
+
+
