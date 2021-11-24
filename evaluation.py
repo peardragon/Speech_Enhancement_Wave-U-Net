@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 SIZE = 16384
 
 
-def test(model, test_input):
+def speech_enhancement(model, test_input):
     data = np.reshape(test_input, (1, 1, -1))
     test_input = data.astype(np.float32)
     # print(test_input.shape)
@@ -27,11 +27,12 @@ def test(model, test_input):
 
 
 if __name__ == "__main__":
-    PATH = "./pt-checkpoints_2021.11.22-04-38/ckpt_18.pt"
-    TEST_PATH = "./testset/noisy/p232_099.wav"
-    CLEAN_PATH = './testset/clean/p232_099.wav'
+    PATH = "./wave_u_net_checkpoints/ckpt_72.pt"
+    TEST_PATH = "./testset/noisy/p232_023.wav"
+    CLEAN_PATH = './testset/clean/p232_023.wav'
     OUTPUT_PATH = "./test_res/"
     model = Model()
+    model.to("cpu")
     model.load_state_dict(torch.load(PATH))
     model.eval()
 
@@ -44,7 +45,7 @@ if __name__ == "__main__":
     orgin_data, _ = librosa.load(TEST_PATH, sr=22050, mono=True, res_type='kaiser_fast', offset=0.0, duration=None)
     clean, _ = librosa.load(CLEAN_PATH, sr=22050, mono=True, res_type='kaiser_fast', offset=0.0, duration=None)
 
-    res, length = test(model, orgin_data)
+    res, length = speech_enhancement(model, orgin_data)
     librosa.output.write_wav(OUTPUT_PATH+"origin.wav", orgin_data[:length], sr=22050)
     librosa.output.write_wav(OUTPUT_PATH+"res.wav", res, sr=22050)
     librosa.output.write_wav(OUTPUT_PATH+"clean.wav", clean[:length], sr=22050)

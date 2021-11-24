@@ -2,7 +2,10 @@ from model import Model
 import librosa
 import torch
 import glob
-from test import test
+from evaluation import speech_enhancement
+import scipy
+from scipy.io import wavfile
+import numpy as np
 
 from tqdm import tqdm
 
@@ -26,7 +29,7 @@ def get_ckpts(path):
 
 if __name__ == "__main__":
     # PATH
-    PATH = "pt-checkpoints_2021.11.22-04-38"
+    PATH = "./wave_u_net_ckpt"
 
     testset_list = [line.rstrip('\n') for line in open("testset/testset_list.txt", "r")]
     model = Model()
@@ -43,7 +46,8 @@ if __name__ == "__main__":
         file_name = mixture_path[-12:]
         orgin_data, _ = librosa.load(mixture_path, sr=22050, mono=True,
                                      res_type='kaiser_fast', offset=0.0, duration=None)
-        res, length = test(model, orgin_data)
+        res, length = speech_enhancement(model, orgin_data)
 
-        librosa.output.write_wav(NOISY_OUTPUT_PATH + file_name, orgin_data[:length], sr=22050)
-        librosa.output.write_wav(RESULTS_OUTPUT_PATH + file_name, res, sr=22050)
+        maxv = np.iinfo(np.int16).max
+        scipy.io.wavfile.write(NOISY_OUTPUT_PATH, 22050, (orgin_data[:length] * maxv).astype(np.int16))
+        scipy.io.wavfile.write(RESULTS_OUTPUT_PATH, 22050, (res * maxv).astype(np.int16))

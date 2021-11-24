@@ -80,8 +80,8 @@ def train(model, num_iter, num_epochs, checkpoint_dir, loss_func, load_model_pat
         # Epoch, Counter,
         load_epoch = load_model_path[load_model_path.find('ckpt') + 5:load_model_path.rfind("_")]
         load_epoch = int(load_epoch)
-        print(f"Load model, Starting .. {load_epoch}")
 
+        # TODO counter, best_score load 하는 부분 필요 (완전 자동화는 logging 작업을 안해서 힘들듯. 지금은 사람이 수정하도록).
         counter = 0
 
         tb = SummaryWriter(tb_log_path)
@@ -90,8 +90,10 @@ def train(model, num_iter, num_epochs, checkpoint_dir, loss_func, load_model_pat
 
     model = model.to(DEVICE)
     if final:
+        print("Final Training With lower LR")
         LR = 0.00001
         BATCH_SIZE = 32
+        load_epoch = 0
     else:
         LR = 0.0001
         BATCH_SIZE = 16
@@ -100,6 +102,8 @@ def train(model, num_iter, num_epochs, checkpoint_dir, loss_func, load_model_pat
 
     early_stopping = EarlyStopping(patience=20, verbose=True)
     early_stopping.counter = counter
+
+    print(f"Starting .. {load_epoch}")
 
     for epoch in range(load_epoch, num_epochs):
         print("")
@@ -123,7 +127,7 @@ def train(model, num_iter, num_epochs, checkpoint_dir, loss_func, load_model_pat
 
             kbar.update(i + 1, values=[("loss", loss)])
             loss_tot += loss.item()
-            if (i+1) % 200 == 0:
+            if (i+1) % int(len(dataloader)/5) == 0:
                 checkpoint_prefix = os.path.join(checkpoint_dir, f"ckpt_{epoch + 1}_{i + 1}.pt")
                 torch.save(model.state_dict(), checkpoint_prefix)
             tb.add_scalar(f"Training running loss / Epoch :{epoch+1}", loss, i+1)
@@ -175,10 +179,13 @@ if __name__ == "__main__":
 
     import datetime
 
-    checkpoint_dir = './pt-checkpoints' + datetime.datetime.now().strftime("_%Y.%m.%d-%H-%M")
-    checkpoint_dir_final = './pt-checkpoints' + datetime.datetime.now().strftime("_%Y.%m.%d-%H-%M") + "/final"
-    os.mkdir(checkpoint_dir)
-    os.mkdir(checkpoint_dir_final)
+    # Customize-able
+    # checkpoint_dir = './pt-checkpoints' + datetime.datetime.now().strftime("_%Y.%m.%d-%H-%M")
+    # checkpoint_dir_final = './pt-checkpoints' + datetime.datetime.now().strftime("_%Y.%m.%d-%H-%M") + "/final"
+    checkpoint_dir = './wave_u_net_checkpoints'
+    checkpoint_dir_final = './wave_u_net_checkpoints/final'
+    # os.mkdir(checkpoint_dir)
+    # os.mkdir(checkpoint_dir_final)
 
     torch.manual_seed(0)
 
@@ -189,12 +196,15 @@ if __name__ == "__main__":
 
     # Parameters : need to change
 
-    MODEL_PATH = "./pt-checkpoints_2021.11.22-04-38/ckpt_87_2000.pt"
+    MODEL_PATH = "./wave_u_net_checkpoints/ckpt_92_2000.pt"
     # log_dir default : runs/CURRENT_DATETIME_HOSTNAME
     TB_PATH = "./runs/train"
+    TB_2_PATH = "./runs/final_train"
     counter = 86-71
 
 
     # train(model, dataloader, EPOCHS, checkpoint_dir, l2_loss)
-    train(model, 2000, EPOCHS, checkpoint_dir, l2_loss,
-          load_model_path=MODEL_PATH, tb_log_path=TB_PATH, counter=counter)
+    # train(model, 2000, EPOCHS, checkpoint_dir, l2_loss,
+    #       load_model_path=MODEL_PATH, tb_log_path=TB_PATH, counter=counter)
+
+    train(model, 2000, EPOCHS, checkpoint_dir_final, l2_loss, load_model_path=MODEL_PATH, tb_log_path=TB_2_PATH, final=True)
