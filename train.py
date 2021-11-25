@@ -45,6 +45,8 @@ class EarlyStopping:
         if self.best_score is None:
             self.best_score = score
             self.save_checkpoint(val_loss, model)
+
+        # -val_loss 가 클 수록 더 나은 모델, score < best_score ( -val_loss ) 이면, 모델이 더 나아지지 않음. count.
         elif score < self.best_score + self.delta:
             self.counter += 1
             print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
@@ -70,19 +72,23 @@ def l2_loss(output, target):
 
 # torch Document
 def train(model, num_iter, num_epochs, checkpoint_dir, loss_func, load_model_path=None, tb_log_path=None, counter=0,
-          final=False):
+          saved_loss=None, final=False):
     load_epoch = 0
-    counter = counter
+    counter = 0
+    best_score = None
+    min_loss = np.Inf
 
     if load_model_path != None:
         print("Load model weight from saved model...")
         model.load_state_dict(torch.load(load_model_path))
-        # Epoch, Counter,
-        load_epoch = load_model_path[load_model_path.find('ckpt') + 5:load_model_path.rfind("_")]
-        load_epoch = int(load_epoch)
+        if not final:
+            # Epoch, Counter,
+            load_epoch = load_model_path[load_model_path.find('ckpt') + 5:load_model_path.rfind("_")]
+            load_epoch = int(load_epoch)
 
-        # TODO counter, best_score load 하는 부분 필요 (완전 자동화는 logging 작업을 안해서 힘들듯. 지금은 사람이 수정하도록).
-        counter = 0
+            counter = counter
+            min_loss = saved_loss
+            best_score = -min_loss
 
         tb = SummaryWriter(tb_log_path)
     else:
@@ -94,6 +100,10 @@ def train(model, num_iter, num_epochs, checkpoint_dir, loss_func, load_model_pat
         LR = 0.00001
         BATCH_SIZE = 32
         load_epoch = 0
+
+        counter = 0
+        best_score = None
+        min_loss = np.Inf
     else:
         LR = 0.0001
         BATCH_SIZE = 16
@@ -102,6 +112,8 @@ def train(model, num_iter, num_epochs, checkpoint_dir, loss_func, load_model_pat
 
     early_stopping = EarlyStopping(patience=20, verbose=True)
     early_stopping.counter = counter
+    early_stopping.val_loss_min = min_loss
+    early_stopping.best_score = best_score
 
     print(f"Starting .. {load_epoch}")
 
@@ -127,7 +139,7 @@ def train(model, num_iter, num_epochs, checkpoint_dir, loss_func, load_model_pat
 
             kbar.update(i + 1, values=[("loss", loss)])
             loss_tot += loss.item()
-            if (i+1) % int(len(dataloader)/5) == 0:
+            if (i+1) % 200 == 0:
                 checkpoint_prefix = os.path.join(checkpoint_dir, f"ckpt_{epoch + 1}_{i + 1}.pt")
                 torch.save(model.state_dict(), checkpoint_prefix)
             tb.add_scalar(f"Training running loss / Epoch :{epoch+1}", loss, i+1)
@@ -188,23 +200,25 @@ if __name__ == "__main__":
     # os.mkdir(checkpoint_dir_final)
 
     torch.manual_seed(0)
-
-    BATCH_SIZE = 16
     EPOCHS = 1000
 
     model = Model()
 
     # Parameters : need to change
 
-    MODEL_PATH = "./wave_u_net_checkpoints/ckpt_92_2000.pt"
+    MODEL_PATH = "./wave_u_net_checkpoints/ckpt_72.pt"
     # log_dir default : runs/CURRENT_DATETIME_HOSTNAME
     TB_PATH = "./runs/train"
     TB_2_PATH = "./runs/final_train"
-    counter = 86-71
 
+    # Manually
+
+    # counter = fin - 71
+    # saved_min_loss = 1.41e-7
 
     # train(model, dataloader, EPOCHS, checkpoint_dir, l2_loss)
     # train(model, 2000, EPOCHS, checkpoint_dir, l2_loss,
-    #       load_model_path=MODEL_PATH, tb_log_path=TB_PATH, counter=counter)
+    #       load_model_path=MODEL_PATH, tb_log_path=TB_PATH, counter=counter, saved_loss=saved_min_loss)
 
-    train(model, 2000, EPOCHS, checkpoint_dir_final, l2_loss, load_model_path=MODEL_PATH, tb_log_path=TB_2_PATH, final=True)
+    train(model, 2000, EPOCHS, checkpoint_dir_final, l2_loss,
+          load_model_path=MODEL_PATH, tb_log_path=TB_2_PATH, final=True)

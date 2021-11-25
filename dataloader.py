@@ -56,11 +56,11 @@ class Dataset(data.Dataset):
 
         if mode == "train":
             dataset_list = dataset_list[:-10]
-            INIT_LIMIT = size * 16
+            INIT_LIMIT = size * batch_size
             limit = (int((INIT_LIMIT / batch_size) * 16))
             if limit <= len(dataset_list):
-                frames_total = len(dataset_list)
-                start = np.random.randint(frames_total - limit + 1)
+                len_total = len(dataset_list)
+                start = np.random.randint(len_total - limit + 1)
                 # print(f"Random crop from: {start}")
                 end = start + limit
                 dataset_list = dataset_list[start:end]
@@ -92,13 +92,15 @@ if __name__=="__main__":
     namelist = glob.glob("dataset/noisy/*.wav")
     for name in namelist:
         idx = name[-12:]
-        string = f'dataset/noisy/{idx}.wav dataset/clean/{idx}.wav\n'
+        string = f'dataset/noisy/{idx} dataset/clean/{idx}\n'
         f.write(string)
     f.close()
     from torch.utils.data import DataLoader
-    dataset = Dataset()
-    dataloader = DataLoader(dataset, batch_size=2)
+
+    train_dataset = Dataset(size=2000, batch_size=32, mode="test")
+    dataloader = DataLoader(train_dataset, batch_size=32, pin_memory=True, shuffle=True)
+
     real_batch = next(iter(dataloader))
-    print(real_batch[0])
+    print(len(dataloader))
     print(real_batch[0].shape)
 

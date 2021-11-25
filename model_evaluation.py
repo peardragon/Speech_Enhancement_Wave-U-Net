@@ -12,7 +12,7 @@ from tqdm import tqdm
 def get_ckpt(path):
     total_list = []
     for x in ['?', '??', '???']:
-        ptlist = glob.glob(f"./{path}/ckpt_{x}.pt")
+        ptlist = glob.glob(f"{path}/ckpt_{x}.pt")
         if(len(ptlist)>0):
             total_list.append(ptlist)
 
@@ -21,7 +21,7 @@ def get_ckpt(path):
 def get_ckpts(path):
     total_list = []
     for x in ['?', '??', '???']:
-        ptlist = glob.glob(f"./{path}/ckpt_{x}.pt")
+        ptlist = glob.glob(f"{path}/ckpt_{x}.pt")
         if(len(ptlist)>0):
             total_list.append(ptlist)
 
