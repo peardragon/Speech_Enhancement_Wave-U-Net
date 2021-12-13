@@ -95,6 +95,7 @@ if __name__=="__main__":
         string = f'dataset/noisy/{idx} dataset/clean/{idx}\n'
         f.write(string)
     f.close()
+
     from torch.utils.data import DataLoader
 
     train_dataset = Dataset(size=2000, batch_size=32, mode="test")

@@ -2,6 +2,7 @@ import torch
 from dataloader import Dataset
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
+import torchaudio
 from model import Model
 import pkbar
 import numpy as np
@@ -69,14 +70,72 @@ class EarlyStopping:
 def l2_loss(output, target):
     return torch.sum((output - target) ** 2) / output.data.nelement()
 
+# Loss 2. Spectral Loss
+def SpectralLoss(x, target):
+    '''
+    output & target : tensor (Amplitude - time)
+    outputSpec : Spectrogram of output tensor
+    targetSpec : Spectrogram of target tensor
+    '''
+    n_fft = 400
+    outputSpec = torchaudio.transforms.Spectrogram(
+            n_fft=n_fft, power=None, window_fn=lambda x: torch.hann_window(n_fft, device='cuda'))(x)
+    targetSpec = torchaudio.transforms.Spectrogram(
+            n_fft=n_fft, power=None, window_fn=lambda x: torch.hann_window(n_fft, device='cuda'))(target)
+    gap = outputSpec - targetSpec
+    n, _, w, h, _ = targetSpec.size()
+    # w : frequency scale, h : time scale
+
+    loss = torch.abs(torch.sum(gap.pow(2))/(2*n*w*h))
+    return loss
+
+# Loss 3. Frequency Cropped Loss
+def FreqCropLoss(x, target) :
+    '''
+    x, target : spectrogrammed data with librosa.stft & amplitude to db.
+    beta & freq array : hyperparameters
+    - beta : weight array
+        (length : n+1; beta[0]=0 , for convenience of index)
+    - freq : partition boundary frequency array
+        (length : n+1; freq[0]=0 & freq[n]=sampling rate, same reason with above)
+
+    Default sampling rate of Librosa is 22050Hz -> so i set max Hz value as 11025Hz.
+    '''
+    beta = [0, 0.3, 0.1, 0.2, 0.1, 0.3]
+    freq = np.array([0, 400, 600, 1500, 3000, 11025])/11025
+    partitions = len(freq)
+
+    n_fft = 1000
+    outputSpec = torchaudio.transforms.Spectrogram(
+            n_fft=n_fft, power=None, window_fn=lambda x: torch.hann_window(n_fft, device='cuda'))(x)
+    targetSpec = torchaudio.transforms.Spectrogram(
+            n_fft=n_fft, power=None, window_fn=lambda x: torch.hann_window(n_fft, device='cuda'))(target)
+    gap = outputSpec - targetSpec
+    w, h = targetSpec.size()
+    # w : frequency scale, h : time scale
+
+    loss = 0.
+    for k in range(1, partitions):
+        l = 0.
+        start = int(freq[k-1]*w)+1
+        if k==1: start=0
+        finish = int(freq[k]*w)
+        for i in range(start, finish):
+            l += torch.sum(gap.pow(2), dim=1)[i]
+        loss += l*beta[k]
+    loss = torch.abs(loss)/(2*w*h)
+    return loss
 
 # torch Document
 def train(model, num_iter, num_epochs, checkpoint_dir, loss_func, load_model_path=None, tb_log_path=None, counter=0,
-          saved_loss=None, final=False):
+          saved_loss=None, final=False, tag=""):
     load_epoch = 0
     counter = 0
     best_score = None
     min_loss = np.Inf
+
+    checkpoint_dir = checkpoint_dir+tag
+    tb_log_path = tb_log_path+tag
 
     if load_model_path != None:
         print("Load model weight from saved model...")
@@ -189,36 +248,37 @@ if __name__ == "__main__":
         print(torch.cuda.get_device_name(0))
         DEVICE = torch.device('cuda')
 
-    import datetime
+    checkpoint_dir = './wave_u_net_checkpoints_SPL'
 
-    # Customize-able
-    # checkpoint_dir = './pt-checkpoints' + datetime.datetime.now().strftime("_%Y.%m.%d-%H-%M")
-    # checkpoint_dir_final = './pt-checkpoints' + datetime.datetime.now().strftime("_%Y.%m.%d-%H-%M") + "/final"
-    checkpoint_dir = './wave_u_net_checkpoints'
-    checkpoint_dir_final = './wave_u_net_checkpoints/final'
-    # os.mkdir(checkpoint_dir)
-    # os.mkdir(checkpoint_dir_final)
+    if not os.path.isdir(checkpoint_dir):
+        os.mkdir(checkpoint_dir)
 
     torch.manual_seed(0)
     EPOCHS = 1000
 
     model = Model()
 
-    # Parameters : need to change
+    # Parameters : need to change - For Continue Learning
 
     MODEL_PATH = "./wave_u_net_checkpoints/ckpt_72.pt"
-    # log_dir default : runs/CURRENT_DATETIME_HOSTNAME
-    TB_PATH = "./runs/train"
-    TB_2_PATH = "./runs/final_train"
 
-    # Manually
+    TB_PATH = "./runs/train"
 
     # counter = fin - 71
     # saved_min_loss = 1.41e-7
 
-    # train(model, dataloader, EPOCHS, checkpoint_dir, l2_loss)
+    # Training Example
+    # train(model, 2000, EPOCHS, checkpoint_dir, l2_loss)
+
+    # Continue Training Example
+    # Training Example 1
     # train(model, 2000, EPOCHS, checkpoint_dir, l2_loss,
     #       load_model_path=MODEL_PATH, tb_log_path=TB_PATH, counter=counter, saved_loss=saved_min_loss)
 
-    train(model, 2000, EPOCHS, checkpoint_dir_final, l2_loss,
-          load_model_path=MODEL_PATH, tb_log_path=TB_2_PATH, final=True)
+    # Final Training Example
+    # train(model, 2000, EPOCHS, checkpoint_dir_final, l2_loss,
+    #       load_model_path=MODEL_PATH, tb_log_path=TB_2_PATH, final=True)
+
+    # Training
+    train(model, 2000, EPOCHS, checkpoint_dir, SpectralLoss, tag="_SPL")
+
