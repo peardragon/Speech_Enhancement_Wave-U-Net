@@ -134,8 +134,10 @@ def train(model, num_iter, num_epochs, checkpoint_dir, loss_func, load_model_pat
     best_score = None
     min_loss = np.Inf
 
-    checkpoint_dir = checkpoint_dir+tag
-    tb_log_path = tb_log_path+tag
+    if checkpoint_dir is not None:
+        checkpoint_dir = checkpoint_dir+tag
+    if tb_log_path is not None:
+        tb_log_path = tb_log_path+tag
 
     if load_model_path != None:
         print("Load model weight from saved model...")
@@ -159,6 +161,9 @@ def train(model, num_iter, num_epochs, checkpoint_dir, loss_func, load_model_pat
         LR = 0.00001
         BATCH_SIZE = 32
         load_epoch = 0
+
+        num_epochs = 1000
+        checkpoint_dir = checkpoint_dir + "/final"
 
         counter = 0
         best_score = None
@@ -234,9 +239,9 @@ def train(model, num_iter, num_epochs, checkpoint_dir, loss_func, load_model_pat
             else:
                 print("")
                 print("final Training")
-                train(model, num_iter=num_iter, num_epochs=1000, checkpoint_dir=checkpoint_dir+"/final",
-                      loss_func=loss_func, final=True)
-            tb.close()
+                # train(model, num_iter=num_iter, num_epochs=1000, checkpoint_dir=checkpoint_dir+"/final",
+                #       loss_func=loss_func, final=True)
+            # tb.close()
             break
 
     tb.close()
@@ -248,10 +253,12 @@ if __name__ == "__main__":
         print(torch.cuda.get_device_name(0))
         DEVICE = torch.device('cuda')
 
-    checkpoint_dir = './wave_u_net_checkpoints_SPL'
+    checkpoint_dir = './wave_u_net_checkpoints_SPL_final'
 
     if not os.path.isdir(checkpoint_dir):
         os.mkdir(checkpoint_dir)
+        os.mkdir(checkpoint_dir+"/final")
+
 
     torch.manual_seed(0)
     EPOCHS = 1000
@@ -260,7 +267,7 @@ if __name__ == "__main__":
 
     # Parameters : need to change - For Continue Learning
 
-    MODEL_PATH = "./wave_u_net_checkpoints/ckpt_72.pt"
+    MODEL_PATH = "./wave_u_net_checkpoints_SPL/ckpt_25.pt"
 
     TB_PATH = "./runs/train"
 
@@ -275,10 +282,14 @@ if __name__ == "__main__":
     # train(model, 2000, EPOCHS, checkpoint_dir, l2_loss,
     #       load_model_path=MODEL_PATH, tb_log_path=TB_PATH, counter=counter, saved_loss=saved_min_loss)
 
-    # Final Training Example
-    # train(model, 2000, EPOCHS, checkpoint_dir_final, l2_loss,
-    #       load_model_path=MODEL_PATH, tb_log_path=TB_2_PATH, final=True)
+
 
     # Training
-    train(model, 2000, EPOCHS, checkpoint_dir, SpectralLoss, tag="_SPL")
+    # train(model, 2000, EPOCHS, checkpoint_dir, SpectralLoss, tag="_SPL")
 
+    # Final Training Example
+    # TODO auto take final version model - find string with regex
+    # TODO model_path FINAL 부분 폴더 만들어 주는거 필요
+    MODEL_PATH = "./wave_u_net_checkpoints_SPL/ckpt_25.pt"
+    train(model, 2000, EPOCHS, checkpoint_dir, SpectralLoss,
+          load_model_path=MODEL_PATH, final=True)

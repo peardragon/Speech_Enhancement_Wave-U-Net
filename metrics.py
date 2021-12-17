@@ -41,8 +41,9 @@ def Eval(ref, deg, sr):
         deg_wav = deg_wav[:min_len]
 
     assert (len(ref_wav) == len(deg_wav) and ref_sr == deg_sr)
-    pesq = PESQ(pesq_sr, ref_wav, deg_wav, mode='wb')
-
+    # pesq = PESQ(pesq_sr, ref_wav, deg_wav, mode='wb')
+    # TODO PESQ error
+    pesq = 0
     return pesq, segSNR, len(ref_wav)
 
 def SSNR(ref_wav, deg_wav, srate=44100, eps=1e-10):

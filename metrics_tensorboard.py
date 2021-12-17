@@ -1,6 +1,7 @@
 from metrics import *
 import glob
 
+
 def librosa_waveform(wav, title):
     fig = plt.figure()
     librosa.display.waveplot(wav)
@@ -21,8 +22,7 @@ def librosa_spectrogram(wav, title, scale='log'):
     return fig
 
 
-
-def sample_audio_evaluation_tensorboard(sample_audio, tb_log_dir, model_path, glob_step):
+def sample_audio_evaluation_tensorboard(sample_audio, tb_log_dir, model_path, glob_step, tensorboard_audio_list):
     tb = SummaryWriter(tb_log_dir)
 
     # Default path setting
@@ -45,12 +45,14 @@ def sample_audio_evaluation_tensorboard(sample_audio, tb_log_dir, model_path, gl
     model.eval()
     # print(f"Current Model : {idx}")
     curr_output, length = speech_enhancement(model, origin_data)
-    if len(length) == 0:
+    if length == 0:
         return None, None
     curr_clean = clean_data[:length]
     curr_origin = origin_data[:length]
 
     maxv = np.iinfo(np.int16).max
+
+    # if(sample_name in tensorboard_audio_list):
     scipy.io.wavfile.write(OUTPUT_PATH + "output.wav", 22050, (curr_output * maxv).astype(np.int16))
     scipy.io.wavfile.write(OUTPUT_PATH + "origin.wav", 22050, (curr_origin * maxv).astype(np.int16))
     scipy.io.wavfile.write(OUTPUT_PATH + "clean.wav", 22050, (curr_clean * maxv).astype(np.int16))
@@ -96,16 +98,24 @@ def sample_audio_evaluation_tensorboard(sample_audio, tb_log_dir, model_path, gl
 
 if __name__ == "__main__":
 
-    #
-    DEFAULT_TB_LOG = "./runs/metrics"
-    sample_audio = "p232_023.wav"
-    CKPTS_PATH = ""
-    #
+    # ########################## !! MODIFY !! ########################### #
 
-    models = get_ckpts("./wave_u_net_checkpoints/")
-    model = Model()
-    models = sum(models,[])
+    DEFAULT_TB_LOG = "./runs/metrics_SPL"
+    models = get_ckpts("./wave_u_net_checkpoints_SPL/")
+
+    # ################################################################### #
+    # sample_audio = "p232_023.wav"
     sample_list = glob.glob("./testset/clean/*.wav")
+    from random import sample
+
+    print(sample(sample_list, 10))
+
+    sample_list = sample(sample_list, 10)
+
+    # sample_audio_list = ["p232_023.wav", "p232_020.wav", "p257_056.wav", "p257_256.wav", "p257_334.wav", "p232_244.wav"]
+
+    model = Model()
+    models = sum(models, [])
     pesq_list = []
     segSNR_list = []
 
@@ -114,7 +124,7 @@ if __name__ == "__main__":
         glob_step = 0
         for modelckpt in tqdm(models):
             sample_name = sample[-12:]
-            pesq, segSNR = sample_audio_evaluation_tensorboard(sample_name, DEFAULT_TB_LOG, modelckpt, glob_step)
+            pesq, segSNR = sample_audio_evaluation_tensorboard(sample_name, DEFAULT_TB_LOG, modelckpt, glob_step, None)
             glob_step += 1
 
         if pesq is not None and segSNR is not None:
@@ -124,5 +134,3 @@ if __name__ == "__main__":
     tb = SummaryWriter(DEFAULT_TB_LOG)
     tb.add_scalar(f"PESQ", np.mean(pesq_list), global_step=0)
     tb.add_scalar(f"SSNR", np.mean(segSNR_list), global_step=0)
-
-
