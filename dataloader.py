@@ -7,7 +7,8 @@ import glob
 
 # https://github.com/noise-suppression/Wave-U-Net-for-Speech-Enhancement
 def sample_fixed_length_data_aligned(data_a, data_b, sample_length):
-    """sample with fixed length from two dataset
+    """
+    sample with fixed length from two dataset
     """
     assert len(data_a) == len(data_b), "Inconsistent dataset length, unable to sampling"
     assert len(data_a) >= sample_length, f"len(data_a) is {len(data_a)}, sample_length is {sample_length}."

@@ -17,6 +17,12 @@ import scipy
 # https://github.com/jdavibedoya/SE_Wave-U-Net/blob/d54aa19245cbe40de10ab2c90486043aad265bb3/Metrics.py
 
 def Eval(ref, deg, sr):
+    """
+    Compute SSNR and PESQ
+    ref : clean speech input as array, array.
+    deg : other speech input for compare with clean one, array.
+    sr : target sampling rate, scalar.
+    """
     # Compute the SSNR
     ref_wav, ref_sr = librosa.load(ref, sr=sr, mono=True)
     deg_wav, deg_sr = librosa.load(deg, sr=sr, mono=True)
@@ -42,7 +48,7 @@ def Eval(ref, deg, sr):
 
     assert (len(ref_wav) == len(deg_wav) and ref_sr == deg_sr)
     # pesq = PESQ(pesq_sr, ref_wav, deg_wav, mode='wb')
-    # TODO PESQ error
+    # ! PESQ ERROR
     pesq = 0
     return pesq, segSNR, len(ref_wav)
 

@@ -1,3 +1,8 @@
+## Info (12.19. 2021)
+
+PESQ error occured, for execution normally, now I just set pesq as 0.  
+
+
 # Speech_Enhancement_Wave-U-Net
   
 References  
@@ -32,18 +37,28 @@ run train.py
 
 Modify path : log_tb_path, checkpoint_dir is path of tensorboard log data, checkpointdata
 
+<pre>
+Example
+model = Model()
+train(model, 2000, EPOCHS, checkpoint_dir, SpectralLoss, tag="_SPL")
+</pre>
+
 * If you want continue learning
   * Modify suitable load_model_path
   * Modify counter, saved_min_loss for continue early stopping
 <pre>
   Example
   # Continue Training Example
+  model = Model()
+
+  MODEL_PATH = "./wave_u_net_checkpoints_SPL/ckpt_25.pt"
+  TB_PATH = "./runs/train"
 
   counter = fin - 71
   saved_min_loss = 1.41e-7
 
   train(model, 2000, EPOCHS, checkpoint_dir, l2_loss,
-        load_model_path=MODEL_PATH, tb_log_path=TB_PATH, counter=counter, saved_loss=saved_min_loss)
+        load_model_path=MODEL_PATH, tb_log_path=TB_PATH, counter=counter, saved_loss=saved_min_loss, tag="")
 </pre>
 
 
@@ -53,22 +68,36 @@ Modify path : log_tb_path, checkpoint_dir is path of tensorboard log data, check
 <pre>
   Example
   # Final Training Example
+  MODEL_PATH = "./wave_u_net_checkpoints_SPL/ckpt_25.pt"
 
-  train(model, 2000, EPOCHS, checkpoint_dir_final, l2_loss,
-  load_model_path=MODEL_PATH, tb_log_path=TB_2_PATH, final=True)
+  train(model, 2000, EPOCHS, checkpoint_dir, SpectralLoss,
+        load_model_path=MODEL_PATH, final=True)
+
 </pre>
 
 ## 3. Evaluation
-In this project, Evaluation results saved as tensorboard log data
+In this project, Evaluation results saved as tensorboard log data  
+for Default, random (10) sampling from clean/noisy testset data
 
 run metrics_tensorboard.py
 
-Modify path : DEFAULT_TB_LOG, sample_audio is path of tensorboard path for save evaluation results, 
-sample_audio name  
+Modify path : DEFAULT_TB_LOG, models  
+   * DEFAULT_TB_LOG : directory for save tensorboard log  
+   * model : directory for save tensorboard log
 
 Default setting
 
 <pre>
     DEFAULT_TB_LOG = "./runs/metrics"
-    sample_audio = "p232_023.wav"
+    models = get_ckpts("./wave_u_net_checkpoints/")  
+    sampling_num = 10
 </pre>
+
+## Extra : Run tensorboard
+
+### 1. Run anaconda prompt, activate project environment
+### 2. Execute below command
+<pre>
+ tensorboard --logdir="Your Tensorboard Path"
+</pre>
+

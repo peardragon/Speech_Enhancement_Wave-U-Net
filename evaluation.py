@@ -10,6 +10,11 @@ SIZE = 16384
 
 
 def speech_enhancement(model, test_input):
+    """
+    With model and noisy input, output the enhancement array
+    model : input model path, string.
+    test_input : origin noisy input, array. output of function librosa.load().
+    """
     data = np.reshape(test_input, (1, 1, -1))
     test_input = data.astype(np.float32)
     # print(test_input.shape)

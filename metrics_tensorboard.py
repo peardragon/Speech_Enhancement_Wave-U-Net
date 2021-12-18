@@ -3,6 +3,12 @@ import glob
 
 
 def librosa_waveform(wav, title):
+    """
+    return waveform plot as matplotlib figure type.
+
+    wav : .wav file directory, string. what .wav file to use, return spectrogram plot as matplotlib figure type.
+    title : title for matplotlib, string.
+    """
     fig = plt.figure()
     librosa.display.waveplot(wav)
     plt.title(title)
@@ -11,6 +17,13 @@ def librosa_waveform(wav, title):
 
 
 def librosa_spectrogram(wav, title, scale='log'):
+    """
+    return spectrogram plot as matplotlib figure type.
+
+    wav : .wav file directory, string. what .wav file to use, return spectrogram plot as matplotlib figure type.
+    title : title for matplotlib, string.
+    scale : matplotlib y-axis scale, string. default is log
+    """
     D = librosa.stft(wav)  # STFT of y
     S_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
     # return shape (1+n_fft/2, n_frames)
@@ -22,7 +35,13 @@ def librosa_spectrogram(wav, title, scale='log'):
     return fig
 
 
-def sample_audio_evaluation_tensorboard(sample_audio, tb_log_dir, model_path, glob_step, tensorboard_audio_list):
+def sample_audio_evaluation_tensorboard(sample_audio, tb_log_dir, model_path, glob_step):
+    """
+    sample_audio : sample audio directory, string. with this sample audio, make spectrograph image, several metrics, and save these as tensorboard log file
+    tb_log_dir : tensorboard log directory, string. where you save tensorboard log file.
+    model_path : model checkpoint directroy, string. what model you want to evaluate.
+    glob_step : tensorboard global step variable, int. In tensorboard, step is written by this value.
+    """
     tb = SummaryWriter(tb_log_dir)
 
     # Default path setting
@@ -102,15 +121,20 @@ if __name__ == "__main__":
 
     DEFAULT_TB_LOG = "./runs/metrics_SPL"
     models = get_ckpts("./wave_u_net_checkpoints_SPL/")
+    sampling_num = 10
 
     # ################################################################### #
-    # sample_audio = "p232_023.wav"
+    import os
+
+    if not os.path.isdir(DEFAULT_TB_LOG):
+        os.mkdir(DEFAULT_TB_LOG)
+
     sample_list = glob.glob("./testset/clean/*.wav")
     from random import sample
 
-    print(sample(sample_list, 10))
+    print(sample(sample_list, sampling_num))
 
-    sample_list = sample(sample_list, 10)
+    sample_list = sample(sample_list, sampling_num)
 
     # sample_audio_list = ["p232_023.wav", "p232_020.wav", "p257_056.wav", "p257_256.wav", "p257_334.wav", "p232_244.wav"]
 
@@ -124,7 +148,7 @@ if __name__ == "__main__":
         glob_step = 0
         for modelckpt in tqdm(models):
             sample_name = sample[-12:]
-            pesq, segSNR = sample_audio_evaluation_tensorboard(sample_name, DEFAULT_TB_LOG, modelckpt, glob_step, None)
+            pesq, segSNR = sample_audio_evaluation_tensorboard(sample_name, DEFAULT_TB_LOG, modelckpt, glob_step)
             glob_step += 1
 
         if pesq is not None and segSNR is not None:

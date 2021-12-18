@@ -10,6 +10,10 @@ import numpy as np
 from tqdm import tqdm
 
 def get_ckpt(path):
+    """
+    get model final version path
+    path: parent directory of model checkpoints, string
+    """
     total_list = []
     for x in ['?', '??', '???']:
         ptlist = glob.glob(f"{path}/ckpt_{x}.pt")
@@ -19,6 +23,10 @@ def get_ckpt(path):
     return total_list[-1][-1]
 
 def get_ckpts(path):
+    """
+    get model versions paths as list
+    path: parent directory of model checkpoints, string
+    """
     total_list = []
     for x in ['?', '??', '???']:
         ptlist = glob.glob(f"{path}/ckpt_{x}.pt")

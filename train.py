@@ -129,6 +129,23 @@ def FreqCropLoss(x, target) :
 # torch Document
 def train(model, num_iter, num_epochs, checkpoint_dir, loss_func, load_model_path=None, tb_log_path=None, counter=0,
           saved_loss=None, final=False, tag=""):
+    """
+    train the wave-u-net
+    model : pytorch model, pytorch model()
+    num_iter : how much iteration at one epoch, int
+    num_epochs : how much do train, int.
+    checkpoint_dir : path for save checkpoint, string.
+    loss_func : loss function, function type.
+    load_model_path : for continue training, exact model checkpoint path, string.
+    tb_log_path : path for save tensorboard log file, string.
+    counter, saved_loss : for continue training, need to manually modify. Earlystopping option parameter.
+                        counter : validation loss가 개선된 후 기다리는 기간이 load 한 model 에서 얼마나 진행되었는지.
+                        saved_loss : load 한 모델 기준으로, 마지막으로 가장 좋은 validation loss
+                        두 변수는 tensorboard 를 통해 확인할 수 있다.
+    final : for final training, bool.
+    tag : for setting directory path. for saved model / tensorboard log
+
+    """
     load_epoch = 0
     counter = 0
     best_score = None
@@ -253,43 +270,35 @@ if __name__ == "__main__":
         print(torch.cuda.get_device_name(0))
         DEVICE = torch.device('cuda')
 
-    checkpoint_dir = './wave_u_net_checkpoints_SPL_final'
+    checkpoint_dir = './wave_u_net_checkpoints'
 
     if not os.path.isdir(checkpoint_dir):
         os.mkdir(checkpoint_dir)
         os.mkdir(checkpoint_dir+"/final")
-
 
     torch.manual_seed(0)
     EPOCHS = 1000
 
     model = Model()
 
-    # Parameters : need to change - For Continue Learning
+    # -------- Training Example -------- #
 
-    MODEL_PATH = "./wave_u_net_checkpoints_SPL/ckpt_25.pt"
-
-    TB_PATH = "./runs/train"
-
-    # counter = fin - 71
-    # saved_min_loss = 1.41e-7
-
-    # Training Example
-    # train(model, 2000, EPOCHS, checkpoint_dir, l2_loss)
-
-    # Continue Training Example
-    # Training Example 1
-    # train(model, 2000, EPOCHS, checkpoint_dir, l2_loss,
-    #       load_model_path=MODEL_PATH, tb_log_path=TB_PATH, counter=counter, saved_loss=saved_min_loss)
-
-
-
-    # Training
     # train(model, 2000, EPOCHS, checkpoint_dir, SpectralLoss, tag="_SPL")
 
-    # Final Training Example
-    # TODO auto take final version model - find string with regex
-    # TODO model_path FINAL 부분 폴더 만들어 주는거 필요
+    # -------- Continue Training Example -------- #
+
+    # $$$ Parameters : need to change - For Continue Learning $$$ #
+
+    # MODEL_PATH = "./wave_u_net_checkpoints_SPL/ckpt_25.pt"
+    # TB_PATH = "./runs/train"
+
+    # counter = 86 - 71
+    # saved_min_loss = 1.41e-7
+
+    # train(model, 2000, EPOCHS, checkpoint_dir, l2_loss,
+    #       load_model_path=MODEL_PATH, tb_log_path=TB_PATH, counter=counter, saved_loss=saved_min_loss, tag="")
+
+    # -------- Final Training Example -------- #
     MODEL_PATH = "./wave_u_net_checkpoints_SPL/ckpt_25.pt"
     train(model, 2000, EPOCHS, checkpoint_dir, SpectralLoss,
-          load_model_path=MODEL_PATH, final=True)
+          load_model_path=MODEL_PATH, final=True, tag="SPL")
