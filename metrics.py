@@ -16,42 +16,6 @@ import scipy
 
 # https://github.com/jdavibedoya/SE_Wave-U-Net/blob/d54aa19245cbe40de10ab2c90486043aad265bb3/Metrics.py
 
-def Eval(ref, deg, sr):
-    """
-    Compute SSNR and PESQ
-    ref : clean speech input as array, array.
-    deg : other speech input for compare with clean one, array.
-    sr : target sampling rate, scalar.
-    """
-    # Compute the SSNR
-    ref_wav, ref_sr = librosa.load(ref, sr=sr, mono=True)
-    deg_wav, deg_sr = librosa.load(deg, sr=sr, mono=True)
-
-    if np.abs(len(ref_wav) - len(deg_wav)) < 10:  # tolerate up to 10 samples difference
-        min_len = min(len(ref_wav), len(deg_wav))
-        ref_wav = ref_wav[:min_len]
-        deg_wav = deg_wav[:min_len]
-
-    assert (len(ref_wav) == len(deg_wav) and ref_sr == deg_sr)
-    segsnr_mean = SSNR(ref_wav, deg_wav, ref_sr)
-    segSNR = np.mean(segsnr_mean)
-
-    # Compute the PESQ
-    pesq_sr = 16000
-    ref_wav, ref_sr = librosa.load(ref, sr=pesq_sr, mono=True)
-    deg_wav, deg_sr = librosa.load(deg, sr=pesq_sr, mono=True)
-
-    if np.abs(len(ref_wav) - len(deg_wav)) < 10:  # tolerate up to 10 samples difference
-        min_len = min(len(ref_wav), len(deg_wav))
-        ref_wav = ref_wav[:min_len]
-        deg_wav = deg_wav[:min_len]
-
-    assert (len(ref_wav) == len(deg_wav) and ref_sr == deg_sr)
-    # pesq = PESQ(pesq_sr, ref_wav, deg_wav, mode='wb')
-    # ! PESQ ERROR
-    pesq = 0
-    return pesq, segSNR, len(ref_wav)
-
 def SSNR(ref_wav, deg_wav, srate=44100, eps=1e-10):
     """ Segmental Signal-to-Noise Ratio Objective Speech Quality Measure
         This function implements the segmental signal-to-noise ratio
@@ -95,6 +59,83 @@ def SSNR(ref_wav, deg_wav, srate=44100, eps=1e-10):
         segmental_snr[-1] = min(segmental_snr[-1], MAX_SNR)
         start += int(skiprate)
     return segmental_snr
+
+
+def Eval(ref, deg, sr):
+    """
+    Compute SSNR and PESQ
+    ref : clean speech input as array, array.
+    deg : other speech input for compare with clean one, array.
+    sr : target sampling rate, scalar.
+    """
+    # Compute the SSNR
+    ref_wav, ref_sr = librosa.load(ref, sr=sr, mono=True)
+    deg_wav, deg_sr = librosa.load(deg, sr=sr, mono=True)
+
+    if np.abs(len(ref_wav) - len(deg_wav)) < 10:  # tolerate up to 10 samples difference
+        min_len = min(len(ref_wav), len(deg_wav))
+        ref_wav = ref_wav[:min_len]
+        deg_wav = deg_wav[:min_len]
+
+    assert (len(ref_wav) == len(deg_wav) and ref_sr == deg_sr)
+    segsnr_mean = SSNR(ref_wav, deg_wav, ref_sr)
+    segSNR = np.mean(segsnr_mean)
+
+    # Compute the PESQ
+    pesq_sr = 16000
+    ref_wav, ref_sr = librosa.load(ref, sr=pesq_sr, mono=True)
+    deg_wav, deg_sr = librosa.load(deg, sr=pesq_sr, mono=True)
+
+    if np.abs(len(ref_wav) - len(deg_wav)) < 10:  # tolerate up to 10 samples difference
+        min_len = min(len(ref_wav), len(deg_wav))
+        ref_wav = ref_wav[:min_len]
+        deg_wav = deg_wav[:min_len]
+
+    assert (len(ref_wav) == len(deg_wav) and ref_sr == deg_sr)
+    try:
+        pesq = PESQ(pesq_sr, ref_wav, deg_wav, mode='wb')
+    except:
+        pesq = None
+    return pesq, segSNR, len(ref_wav)
+
+
+if __name__ == "__main__":
+    import glob
+
+    sample = glob.glob("./testset/clean/*.wav")
+    noisy = glob.glob("./testset/noisy/*.wav")
+    pesq_list = []
+    ssnr_list = []
+
+    for ref, deg in tqdm(zip(sample, noisy)):
+        pesq, segSNR, length = Eval(ref, deg, sr=22500)
+        pesq_list.append(pesq)
+        ssnr_list.append(segSNR)
+
+    sort_index_pesq = np.argsort(np.array(pesq_list))
+    sort_index_ssnr = np.argsort(np.array(ssnr_list))
+
+    samples_by_pesq = np.array(sample)[sort_index_pesq]
+    samples_by_ssnr = np.array(sample)[sort_index_ssnr]
+
+    sampling_num = 100
+    mean_pesq = np.mean(np.array(pesq_list)[sort_index_pesq][:sampling_num])
+    mean_ssnr = np.mean(np.array(ssnr_list)[sort_index_ssnr][:sampling_num])
+
+    # Find Mean Noisy metric ( ground )
+    print("Mean Noisy pesq : ", mean_pesq)
+    print("Mean Noisy ssnr : ", mean_ssnr)
+
+    f = open("testset/testset_sort_pesq.txt", 'w')
+    for sample in samples_by_pesq:
+        f.write(sample+"\n")
+    f.close()
+
+    f = open("testset/testset_sort_ssnr.txt", 'w')
+    for sample in samples_by_ssnr:
+        f.write(sample+"\n")
+    f.close()
+
 
 
 

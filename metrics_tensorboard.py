@@ -89,6 +89,10 @@ def sample_audio_evaluation_tensorboard(sample_audio, tb_log_dir, model_path, gl
     # ref : clean one  / deg : predict one
     pesq, segSNR, _ = Eval(ref=OUTPUT_PATH + "clean.wav", deg=OUTPUT_PATH + "output.wav", sr=22050)
 
+    if pesq is None:
+        print("Error : ", sample_name)
+        return None, None
+
     clean_waveform = librosa_waveform(curr_clean, "Clean")
     noisy_waveform = librosa_waveform(curr_origin, "Noisy")
     output_waveform = librosa_waveform(curr_output, "Output")
@@ -119,9 +123,10 @@ if __name__ == "__main__":
 
     # ########################## !! MODIFY !! ########################### #
 
-    DEFAULT_TB_LOG = "./runs/metrics_SPL"
-    models = get_ckpts("./wave_u_net_checkpoints_SPL/")
-    sampling_num = 10
+    DEFAULT_TB_LOG = "./runs/metrics_SPL_final"
+    models = get_ckpts("./wave_u_net_checkpoints_SPL/final/")
+    sampling_num = 100
+    testset_list = "testset/testset_sort_pesq.txt"
 
     # ################################################################### #
     import os
@@ -129,32 +134,38 @@ if __name__ == "__main__":
     if not os.path.isdir(DEFAULT_TB_LOG):
         os.mkdir(DEFAULT_TB_LOG)
 
-    sample_list = glob.glob("./testset/clean/*.wav")
+    sample_list = dataset_list = [line.rstrip('\n') for line in open(testset_list, "r")]
     from random import sample
 
-    print(sample(sample_list, sampling_num))
-
-    sample_list = sample(sample_list, sampling_num)
+    if sampling_num is not None:
+        print(sample_list[:sampling_num])
+        sample_list = sample_list[:sampling_num]
 
     # sample_audio_list = ["p232_023.wav", "p232_020.wav", "p257_056.wav", "p257_256.wav", "p257_334.wav", "p232_244.wav"]
 
     model = Model()
     models = sum(models, [])
-    pesq_list = []
-    segSNR_list = []
+
 
     pesq, segSNR = None, None
-    for sample in tqdm(sample_list):
-        glob_step = 0
-        for modelckpt in tqdm(models):
-            sample_name = sample[-12:]
-            pesq, segSNR = sample_audio_evaluation_tensorboard(sample_name, DEFAULT_TB_LOG, modelckpt, glob_step)
-            glob_step += 1
-
-        if pesq is not None and segSNR is not None:
-            pesq_list.append(pesq)
-            segSNR_list.append(segSNR)
-
     tb = SummaryWriter(DEFAULT_TB_LOG)
-    tb.add_scalar(f"PESQ", np.mean(pesq_list), global_step=0)
-    tb.add_scalar(f"SSNR", np.mean(segSNR_list), global_step=0)
+    model_step = 0
+
+    for modelckpt in tqdm(models):
+        pesq_list = []
+        segSNR_list = []
+        for sample in tqdm(sample_list):
+            sample_name = sample[-12:]
+            pesq, segSNR = sample_audio_evaluation_tensorboard(sample_name, DEFAULT_TB_LOG, modelckpt, model_step)
+            if pesq is None:
+                continue
+
+            if pesq is not None and segSNR is not None:
+                pesq_list.append(pesq)
+                segSNR_list.append(segSNR)
+        print("PESQ : ", np.mean(np.array(pesq_list)), "SSNR :", np.mean(np.array(segSNR_list)), "\n" )
+        tb.add_scalar(f"PESQ", np.mean(np.array(pesq_list)), global_step=model_step)
+        tb.add_scalar(f"SSNR", np.mean(np.array(segSNR_list)), global_step=model_step)
+
+        model_step += 1
+
