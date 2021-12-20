@@ -104,7 +104,8 @@ Default setting
 <pre>
     DEFAULT_TB_LOG = "./runs/metrics"
     models = get_ckpts("./wave_u_net_checkpoints/")  
-    sampling_num = 10
+    sampling_num = 100
+    testset_list = "testset/testset_sort_pesq.txt"
 </pre>
 
 ## Extra : Run tensorboard
