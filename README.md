@@ -75,7 +75,6 @@ train(model, 2000, EPOCHS, checkpoint_dir, SpectralLoss, tag="_SPL")
 
 ## 3. Evaluation
 In this project, Evaluation results saved as tensorboard log data  
-for Default, random (10) sampling from clean/noisy testset data
 
 run metrics_tensorboard.py
 
