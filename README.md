@@ -80,7 +80,7 @@ run metrics_tensorboard.py
 
 Modify path : DEFAULT_TB_LOG, models  
    * DEFAULT_TB_LOG : directory for save tensorboard log  
-   * model : directory for save tensorboard log
+   * model : directory for model checkpoints
 
 Default Directory : Needed testset's sorted txt file. ( run metrics.py you can get )
 <pre>
