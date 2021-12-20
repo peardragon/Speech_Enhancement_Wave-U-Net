@@ -27,9 +27,10 @@ dataset
 │    ├── p225_002.wav  
 │    └── ...   
 └── noisy   
-     ├── p225_001.wav  
-     ├── p225_002.wav  
-     └── ...  
+│    ├── p225_001.wav  
+│    ├── p225_002.wav  
+│    └── ...  
+└──dataset_list.txt
 </pre>
 ## 2. Train
 
@@ -84,6 +85,22 @@ run metrics_tensorboard.py
 Modify path : DEFAULT_TB_LOG, models  
    * DEFAULT_TB_LOG : directory for save tensorboard log  
    * model : directory for save tensorboard log
+
+Default Directory : Needed testset's sorted txt file. ( run metrics.py you can get )
+<pre>
+testset    
+├── clean  
+│    ├── p232_001.wav  
+│    ├── p232_002.wav  
+│    └── ...   
+└── noisy   
+│    ├── p232_001.wav  
+│    ├── p232_002.wav  
+│    └── ...  
+└──testset_list.txt
+└──testset_sort_pesq.txt
+└──testset_sort_ssnr.txt
+</pre>
 
 Default setting
 
