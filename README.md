@@ -1,7 +1,3 @@
-## Info (12.19. 2021)
-
-PESQ error occured, for execution normally, now I just set pesq as 0.  
-
 
 # Speech_Enhancement_Wave-U-Net
   
