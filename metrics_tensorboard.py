@@ -1,5 +1,7 @@
 from metrics import *
 import glob
+import torch.nn as nn
+
 
 
 def librosa_waveform(wav, title):
@@ -34,8 +36,13 @@ def librosa_spectrogram(wav, title, scale='log'):
 
     return fig
 
+# For Gan
+from gan.data_preprocess import slice_signal, window_size, sample_rate
+from gan.utils import emphasis
+from torch.autograd import Variable
 
-def sample_audio_evaluation_tensorboard(sample_audio, tb_log_dir, model_path, glob_step):
+
+def sample_audio_evaluation_tensorboard(sample_audio, tb_log_dir, model_path, glob_step, Model, gan=False):
     """
     sample_audio : sample audio directory, string. with this sample audio, make spectrograph image, several metrics, and save these as tensorboard log file
     tb_log_dir : tensorboard log directory, string. where you save tensorboard log file.
@@ -56,14 +63,44 @@ def sample_audio_evaluation_tensorboard(sample_audio, tb_log_dir, model_path, gl
 
     sample_name = sample_audio[:-4]
 
-    origin_data, _ = librosa.load(TEST_PATH, sr=22050, mono=True, res_type='kaiser_fast', offset=0.0, duration=None)
-    clean_data, _ = librosa.load(CLEAN_PATH, sr=22050, mono=True, res_type='kaiser_fast', offset=0.0, duration=None)
-
     model = Model()
-    model.load_state_dict(torch.load(model_path))
-    model.eval()
+    if gan == False:
+        sr = 22050
+
+        clean_data, _ = librosa.load(CLEAN_PATH, sr=sr, mono=True, res_type='kaiser_fast', offset=0.0, duration=None)
+        origin_data, _ = librosa.load(TEST_PATH, sr=sr, mono=True, res_type='kaiser_fast', offset=0.0, duration=None)
+
+        model.load_state_dict(torch.load(model_path))
+        model.eval()
+        curr_output, length = speech_enhancement(model, origin_data)
+
+    else:
+        sr = 16000
+
+        clean_data, _ = librosa.load(CLEAN_PATH, sr=sr, mono=True, res_type='kaiser_fast', offset=0.0, duration=None)
+        origin_data, _ = librosa.load(TEST_PATH, sr=sr, mono=True, res_type='kaiser_fast', offset=0.0, duration=None)
+
+
+        model.load_state_dict(torch.load(model_path), strict=False)
+        model.eval()
+
+        noisy_slices = slice_signal(TEST_PATH, window_size, 1, sr)
+        enhanced_speech = []
+
+        for noisy_slice in noisy_slices:
+            z = nn.init.normal(torch.Tensor(1, 1024, 8))
+            noisy_slice = torch.from_numpy(emphasis(noisy_slice[np.newaxis, np.newaxis, :])).type(torch.FloatTensor)
+            noisy_slice, z = Variable(noisy_slice), Variable(z)
+            generated_speech = model(noisy_slice, z).data.cpu().numpy()
+            generated_speech = emphasis(generated_speech, emph_coeff=0.95, pre=False)
+            generated_speech = generated_speech.reshape(-1)
+            enhanced_speech.append(generated_speech)
+        curr_output = np.array(enhanced_speech).reshape(1, -1).flatten()
+        length = len(curr_output)
+
+
+
     # print(f"Current Model : {idx}")
-    curr_output, length = speech_enhancement(model, origin_data)
     if length == 0:
         return None, None
     curr_clean = clean_data[:length]
@@ -72,9 +109,9 @@ def sample_audio_evaluation_tensorboard(sample_audio, tb_log_dir, model_path, gl
     maxv = np.iinfo(np.int16).max
 
     # if(sample_name in tensorboard_audio_list):
-    scipy.io.wavfile.write(OUTPUT_PATH + "output.wav", 22050, (curr_output * maxv).astype(np.int16))
-    scipy.io.wavfile.write(OUTPUT_PATH + "origin.wav", 22050, (curr_origin * maxv).astype(np.int16))
-    scipy.io.wavfile.write(OUTPUT_PATH + "clean.wav", 22050, (curr_clean * maxv).astype(np.int16))
+    scipy.io.wavfile.write(OUTPUT_PATH + "output.wav", sr, (curr_output * maxv).astype(np.int16))
+    scipy.io.wavfile.write(OUTPUT_PATH + "origin.wav", sr, (curr_origin * maxv).astype(np.int16))
+    scipy.io.wavfile.write(OUTPUT_PATH + "clean.wav", sr, (curr_clean * maxv).astype(np.int16))
 
     if glob_step == 0:
         clean_audio, sr = torchaudio.load(OUTPUT_PATH + "clean.wav")
@@ -87,7 +124,7 @@ def sample_audio_evaluation_tensorboard(sample_audio, tb_log_dir, model_path, gl
     tb.add_audio(f"{sample_name} Output {glob_step}", output_audio, global_step=glob_step, sample_rate=sr)
 
     # ref : clean one  / deg : predict one
-    pesq, segSNR, _ = Eval(ref=OUTPUT_PATH + "clean.wav", deg=OUTPUT_PATH + "output.wav", sr=22050)
+    pesq, segSNR, _ = Eval(ref=OUTPUT_PATH + "clean.wav", deg=OUTPUT_PATH + "output.wav", sr=sr)
 
     if pesq is None:
         print("Error : ", sample_name)
@@ -123,9 +160,15 @@ if __name__ == "__main__":
 
     # ########################## !! MODIFY !! ########################### #
 
-    DEFAULT_TB_LOG = "./runs/metrics_SPL_final"
-    models = get_ckpts("./wave_u_net_checkpoints_SPL/final/")
-    sampling_num = 100
+    DEFAULT_TB_LOG = "./runs_gan/metrics_89_tot"
+    # models = get_ckpts("./wave_u_net_checkpoints_SPL/final/")
+    # models = [["./wave_u_net_checkpoints_SPL/final/ckpt_16.pt"]]
+    from gan.model import Generator
+
+    # models = [["./wave_u_net_checkpoints/final/ckpt_3.pt"]]
+    models = [["./gan/generator-89.pkl"]]
+
+    sampling_num = None
     testset_list = "testset/testset_sort_pesq.txt"
 
     # ################################################################### #
@@ -143,7 +186,6 @@ if __name__ == "__main__":
 
     # sample_audio_list = ["p232_023.wav", "p232_020.wav", "p257_056.wav", "p257_256.wav", "p257_334.wav", "p232_244.wav"]
 
-    model = Model()
     models = sum(models, [])
 
 
@@ -156,7 +198,8 @@ if __name__ == "__main__":
         segSNR_list = []
         for sample in tqdm(sample_list):
             sample_name = sample[-12:]
-            pesq, segSNR = sample_audio_evaluation_tensorboard(sample_name, DEFAULT_TB_LOG, modelckpt, model_step)
+            pesq, segSNR = sample_audio_evaluation_tensorboard(sample_name, DEFAULT_TB_LOG, modelckpt,
+                                                               model_step, Model=Generator, gan=True)
             if pesq is None:
                 continue
 

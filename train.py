@@ -156,6 +156,10 @@ def train(model, num_iter, num_epochs, checkpoint_dir, loss_func, load_model_pat
     if tb_log_path is not None:
         tb_log_path = tb_log_path+tag
 
+    if not os.path.isdir(checkpoint_dir):
+        os.mkdir(checkpoint_dir)
+        os.mkdir(checkpoint_dir+"/final")
+
     if load_model_path != None:
         print("Load model weight from saved model...")
         model.load_state_dict(torch.load(load_model_path))
@@ -270,20 +274,15 @@ if __name__ == "__main__":
         print(torch.cuda.get_device_name(0))
         DEVICE = torch.device('cuda')
 
-    checkpoint_dir = './wave_u_net_checkpoints'
-
-    if not os.path.isdir(checkpoint_dir):
-        os.mkdir(checkpoint_dir)
-        os.mkdir(checkpoint_dir+"/final")
-
     torch.manual_seed(0)
     EPOCHS = 1000
+    checkpoint_dir = './wave_u_net_checkpoints'
 
     model = Model()
 
     # -------- Training Example -------- #
 
-    # train(model, 2000, EPOCHS, checkpoint_dir, SpectralLoss, tag="_SPL")
+    train(model, 2000, EPOCHS, checkpoint_dir, SpectralLoss, tag="_example")
 
     # -------- Continue Training Example -------- #
 
@@ -299,6 +298,6 @@ if __name__ == "__main__":
     #       load_model_path=MODEL_PATH, tb_log_path=TB_PATH, counter=counter, saved_loss=saved_min_loss, tag="")
 
     # -------- Final Training Example -------- #
-    MODEL_PATH = "./wave_u_net_checkpoints_SPL/ckpt_25.pt"
-    train(model, 2000, EPOCHS, checkpoint_dir, SpectralLoss,
-          load_model_path=MODEL_PATH, final=True, tag="SPL")
+    # MODEL_PATH = "./wave_u_net_checkpoints_SPL/ckpt_25.pt"
+    # train(model, 2000, EPOCHS, checkpoint_dir, SpectralLoss,
+    #       load_model_path=MODEL_PATH, final=True, tag="SPL")
