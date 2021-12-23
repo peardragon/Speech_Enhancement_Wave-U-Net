@@ -160,13 +160,11 @@ if __name__ == "__main__":
 
     # ########################## !! MODIFY !! ########################### #
 
-    DEFAULT_TB_LOG = "./runs_gan/metrics_89_tot"
-    # models = get_ckpts("./wave_u_net_checkpoints_SPL/final/")
-    # models = [["./wave_u_net_checkpoints_SPL/final/ckpt_16.pt"]]
-    from gan.model import Generator
+    DEFAULT_TB_LOG = "./runs/metrics"
+    models = get_ckpts("./wave_u_net_checkpoints/final/")
+    # from gan.model import Generator
 
     # models = [["./wave_u_net_checkpoints/final/ckpt_3.pt"]]
-    models = [["./gan/generator-89.pkl"]]
 
     sampling_num = None
     testset_list = "testset/testset_sort_pesq.txt"
@@ -199,7 +197,7 @@ if __name__ == "__main__":
         for sample in tqdm(sample_list):
             sample_name = sample[-12:]
             pesq, segSNR = sample_audio_evaluation_tensorboard(sample_name, DEFAULT_TB_LOG, modelckpt,
-                                                               model_step, Model=Generator, gan=True)
+                                                               model_step, Model=Model, gan=False)
             if pesq is None:
                 continue
 
